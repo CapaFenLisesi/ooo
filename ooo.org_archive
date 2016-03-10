@@ -1,0 +1,21 @@
+#    -*- mode: org -*-
+
+
+Archived entries from file /Users/tlehman/sync/ooo/ooo.org
+
+
+* Vectors in Ruby
+  :PROPERTIES:
+  :ARCHIVE_TIME: 2016-03-04 Fri 15:34
+  :ARCHIVE_FILE: ~/sync/ooo/ooo.org
+  :ARCHIVE_CATEGORY: ooo
+  :END:
+We need a Ruby class that represents a vector, as these can be used to model 
+positions.
+
+#+begin_src ruby
+class Vector
+  attr_reader :components
+end
+#+end_src
+  

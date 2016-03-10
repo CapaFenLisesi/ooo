@@ -1,0 +1,401 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<title>Object Oriented Orbits: a primer on Newtonian physics</title>
+<!-- 2016-03-04 Fri 15:17 -->
+<meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta  name="generator" content="Org-mode" />
+<meta  name="author" content="Tobi Lehman" />
+<meta  name="description" content="A tour through the mathematics, physics and source code required to simulate a universe with gravity."
+ />
+<style type="text/css">
+ <!--/*--><![CDATA[/*><!--*/
+  .title  { text-align: center; }
+  .todo   { font-family: monospace; color: red; }
+  .done   { color: green; }
+  .tag    { background-color: #eee; font-family: monospace;
+            padding: 2px; font-size: 80%; font-weight: normal; }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  .right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+  .left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+  .center { margin-left: auto; margin-right: auto; text-align: center; }
+  .underline { text-decoration: underline; }
+  #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+  p.verse { margin-left: 3%; }
+  pre {
+    border: 1px solid #ccc;
+    box-shadow: 3px 3px 3px #eee;
+    padding: 8pt;
+    font-family: monospace;
+    overflow: auto;
+    margin: 1.2em;
+  }
+  pre.src {
+    position: relative;
+    overflow: visible;
+    padding-top: 1.2em;
+  }
+  pre.src:before {
+    display: none;
+    position: absolute;
+    background-color: white;
+    top: -10px;
+    right: 10px;
+    padding: 3px;
+    border: 1px solid black;
+  }
+  pre.src:hover:before { display: inline;}
+  pre.src-sh:before    { content: 'sh'; }
+  pre.src-bash:before  { content: 'sh'; }
+  pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+  pre.src-R:before     { content: 'R'; }
+  pre.src-perl:before  { content: 'Perl'; }
+  pre.src-java:before  { content: 'Java'; }
+  pre.src-sql:before   { content: 'SQL'; }
+
+  table { border-collapse:collapse; }
+  caption.t-above { caption-side: top; }
+  caption.t-bottom { caption-side: bottom; }
+  td, th { vertical-align:top;  }
+  th.right  { text-align: center;  }
+  th.left   { text-align: center;   }
+  th.center { text-align: center; }
+  td.right  { text-align: right;  }
+  td.left   { text-align: left;   }
+  td.center { text-align: center; }
+  dt { font-weight: bold; }
+  .footpara:nth-child(2) { display: inline; }
+  .footpara { display: block; }
+  .footdef  { margin-bottom: 1em; }
+  .figure { padding: 1em; }
+  .figure p { text-align: center; }
+  .inlinetask {
+    padding: 10px;
+    border: 2px solid gray;
+    margin: 10px;
+    background: #ffffcc;
+  }
+  #org-div-home-and-up
+   { text-align: right; font-size: 70%; white-space: nowrap; }
+  textarea { overflow-x: auto; }
+  .linenr { font-size: smaller }
+  .code-highlighted { background-color: #ffff00; }
+  .org-info-js_info-navigation { border-style: none; }
+  #org-info-js_console-label
+    { font-size: 10px; font-weight: bold; white-space: nowrap; }
+  .org-info-js_search-highlight
+    { background-color: #ffff00; color: #000000; font-weight: bold; }
+  /*]]>*/-->
+</style>
+<script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2013 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+<script type="text/javascript" src="http://orgmode.org/mathjax/MathJax.js"></script>
+<script type="text/javascript">
+<!--/*--><![CDATA[/*><!--*/
+    MathJax.Hub.Config({
+        // Only one of the two following lines, depending on user settings
+        // First allows browser-native MathML display, second forces HTML/CSS
+        //  config: ["MMLorHTML.js"], jax: ["input/TeX"],
+            jax: ["input/TeX", "output/HTML-CSS"],
+        extensions: ["tex2jax.js","TeX/AMSmath.js","TeX/AMSsymbols.js",
+                     "TeX/noUndefined.js"],
+        tex2jax: {
+            inlineMath: [ ["\\(","\\)"] ],
+            displayMath: [ ['$$','$$'], ["\\[","\\]"], ["\\begin{displaymath}","\\end{displaymath}"] ],
+            skipTags: ["script","noscript","style","textarea","pre","code"],
+            ignoreClass: "tex2jax_ignore",
+            processEscapes: false,
+            processEnvironments: true,
+            preview: "TeX"
+        },
+        showProcessingMessages: true,
+        displayAlign: "center",
+        displayIndent: "2em",
+
+        "HTML-CSS": {
+             scale: 100,
+             availableFonts: ["STIX","TeX"],
+             preferredFont: "TeX",
+             webFont: "TeX",
+             imageFont: "TeX",
+             showMathMenu: true,
+        },
+        MMLorHTML: {
+             prefer: {
+                 MSIE:    "MML",
+                 Firefox: "MML",
+                 Opera:   "HTML",
+                 other:   "HTML"
+             }
+        }
+    });
+/*]]>*///-->
+</script>
+</head>
+<body>
+<div id="content">
+<h1 class="title">Object Oriented Orbits: a primer on Newtonian physics</h1>
+
+<div id="outline-container-sec-1" class="outline-2">
+<h2 id="sec-1"><span class="section-number-2">1</span> We need to go to Mars</h2>
+<div class="outline-text-2" id="text-1">
+<p>
+(Arnold Schwartzeneggar reference)
+</p>
+
+<p>
+Before we can do this, we need to simulate the orbits of Earth and Mars.
+</p>
+</div>
+</div>
+
+<div id="outline-container-sec-2" class="outline-2">
+<h2 id="sec-2"><span class="section-number-2">2</span> What we need</h2>
+<div class="outline-text-2" id="text-2">
+</div><ol class="org-ol"><li><a id="sec-2-1" name="sec-2-1"></a>Before we can simulate orbits, we need to a few things<br  /><div class="outline-text-3" id="text-2-1">
+<ul class="org-ul">
+<li>a <b>model of space</b>
+</li>
+<li>a <b>dynamic rule</b> to update the locations of bodies in space
+</li>
+</ul>
+</div>
+</li></ol>
+</div>
+
+<div id="outline-container-sec-3" class="outline-2">
+<h2 id="sec-3"><span class="section-number-2">3</span> Euclid's axioms</h2>
+<div class="outline-text-2" id="text-3">
+</div><ol class="org-ol"><li><a id="sec-3-1" name="sec-3-1"></a>The first complete model of space ever recorded was compiled by Euclid in ancient Greece.<br  /></li></ol>
+</div>
+
+<div id="outline-container-sec-4" class="outline-2">
+<h2 id="sec-4"><span class="section-number-2">4</span> Axiom 1</h2>
+<div class="outline-text-2" id="text-4">
+</div><ol class="org-ol"><li><a id="sec-4-1" name="sec-4-1"></a>Between any two points \({\color{red} A}\) and \({\color{blue} B}\), a line segment \(L\) can be drawn<br  /><div class="outline-text-3" id="text-4-1">
+</div>
+</li></ol>
+</div>
+
+<div id="outline-container-sec-5" class="outline-2">
+<h2 id="sec-5"><span class="section-number-2">5</span> Axiom 2</h2>
+<div class="outline-text-2" id="text-5">
+</div><ol class="org-ol"><li><a id="sec-5-1" name="sec-5-1"></a>A line segment \(L\) can be extended indefinitely to a larger line segment \(L'\), that contains \(L\)<br  /><div class="outline-text-3" id="text-5-1">
+</div>
+</li></ol>
+</div>
+<div id="outline-container-sec-6" class="outline-2">
+<h2 id="sec-6"><span class="section-number-2">6</span> Axiom 3</h2>
+<div class="outline-text-2" id="text-6">
+</div><ol class="org-ol"><li><a id="sec-6-1" name="sec-6-1"></a>A circle can be drawn at any point with any radius<br  /><div class="outline-text-3" id="text-6-1">
+</div>
+</li></ol>
+</div>
+
+<div id="outline-container-sec-7" class="outline-2">
+<h2 id="sec-7"><span class="section-number-2">7</span> Axiom 4</h2>
+<div class="outline-text-2" id="text-7">
+</div><ol class="org-ol"><li><a id="sec-7-1" name="sec-7-1"></a>All right angles are congruent<br  /><div class="outline-text-3" id="text-7-1">
+</div>
+</li></ol>
+</div>
+
+<div id="outline-container-sec-8" class="outline-2">
+<h2 id="sec-8"><span class="section-number-2">8</span> Axiom 5</h2>
+<div class="outline-text-2" id="text-8">
+</div><ol class="org-ol"><li><a id="sec-8-1" name="sec-8-1"></a>Given a line \(L\) and a point \(p\) not on the line, there is exactly one line \(L'\) through \(p\) that doesn't intersect \(L\)<br  /><div class="outline-text-3" id="text-8-1">
+</div>
+</li></ol>
+</div>
+
+<div id="outline-container-sec-9" class="outline-2">
+<h2 id="sec-9"><span class="section-number-2">9</span> Theorems</h2>
+<div class="outline-text-2" id="text-9">
+<p>
+From these five axioms, we can deduce many useful things, the most useful for our 
+purposes will be the Pythagorean theorem.
+</p>
+</div>
+</div>
+
+<div id="outline-container-sec-10" class="outline-2">
+<h2 id="sec-10"><span class="section-number-2">10</span> An algebraic approach to space</h2>
+<div class="outline-text-2" id="text-10">
+</div><ol class="org-ol"><li><a id="sec-10-1" name="sec-10-1"></a>The ancient Greek tools for doing calculations with space were a <b>compass</b> and <b>straightedge</b><br  /><div class="outline-text-3" id="text-10-1">
+
+<div class="figure">
+<p><img src="./disapprove.png" alt="disapprove.png" />
+</p>
+</div>
+</div>
+</li>
+<li><a id="sec-10-2" name="sec-10-2"></a>Since we are in the future, we can use <b>vectors</b> and <b>computers</b> instead<br  /></li></ol>
+</div>
+<div id="outline-container-sec-11" class="outline-2">
+<h2 id="sec-11"><span class="section-number-2">11</span> Axioms 1 and 2 and vectors</h2>
+<div class="outline-text-2" id="text-11">
+</div><ol class="org-ol"><li><a id="sec-11-1" name="sec-11-1"></a>Vectors are <b>directed line segments</b>, with an outer multiplcation by real numbers, so we can use axioms 1 and 2<br  /><div class="outline-text-3" id="text-11-1">
+<ol class="org-ol">
+<li>Given any two points \(A\) and \(B\), a vector \(\vec{v}\) exists whose tail is \(A\) and head is \(B\)
+</li>
+
+<li>Given any vector \(\vec{v}\) and any real number \(c\), \(c\vec{v}\) extends \(\vec{v}\) by a factor of \(c\)
+</li>
+</ol>
+</div>
+</li></ol>
+</div>
+
+<div id="outline-container-sec-12" class="outline-2">
+<h2 id="sec-12"><span class="section-number-2">12</span> Some terminology</h2>
+<div class="outline-text-2" id="text-12">
+</div><ol class="org-ol"><li><a id="sec-12-1" name="sec-12-1"></a>We call the initial point of a vector its <b>tail</b><br  /></li>
+<li><a id="sec-12-2" name="sec-12-2"></a>The final point of the vector is called its <b>head</b><br  /><div class="outline-text-3" id="text-12-2">
+</div>
+</li></ol>
+</div>
+<div id="outline-container-sec-13" class="outline-2">
+<h2 id="sec-13"><span class="section-number-2">13</span> Vectors can be added</h2>
+<div class="outline-text-2" id="text-13">
+</div><ol class="org-ol"><li><a id="sec-13-1" name="sec-13-1"></a>Given any two vectors \(\vec{v}\) and \(\vec{w}\) <span class="underline">with the same tail</span>, their sum \(\vec{v} + \vec{w}\) can be visualized using a parallelogram:<br  /><div class="outline-text-3" id="text-13-1">
+</div>
+</li></ol>
+</div>
+
+<div id="outline-container-sec-14" class="outline-2">
+<h2 id="sec-14"><span class="section-number-2">14</span> Vectors and coordinate systems</h2>
+<div class="outline-text-2" id="text-14">
+</div><ol class="org-ol"><li><a id="sec-14-1" name="sec-14-1"></a>Given a coordinate system, we can represent vectors using pairs (2D) or triples (3D) of real numbers:<br  /></li></ol>
+</div>
+<div id="outline-container-sec-15" class="outline-2">
+<h2 id="sec-15"><span class="section-number-2">15</span> Vectors, points and you</h2>
+<div class="outline-text-2" id="text-15">
+<p>
+If you pick a point, call it \(O\), and then consider the set of all vectors \(\vec{OP}\) where \(P\) is some point, 
+you can see that there is a natural correspondence between points and vectors.
+</p>
+
+<p>
+DIAGRAM
+</p>
+</div>
+</div>
+<div id="outline-container-sec-16" class="outline-2">
+<h2 id="sec-16"><span class="section-number-2">16</span> Points in Ruby</h2>
+<div class="outline-text-2" id="text-16">
+</div><ol class="org-ol"><li><a id="sec-16-1" name="sec-16-1"></a>We can represent points using arrays of real numbers<br  /></li>
+<li><a id="sec-16-2" name="sec-16-2"></a>If \(A\) and \(B\) are points, then \(A-B\) is the vector from \(B\) to \(A\):<br  /><div class="outline-text-3" id="text-16-2">
+<div class="org-src-container">
+
+<pre class="src src-ruby">A = Point.new([ax,ay,az])
+B = Point.new([bx,by,bz])
+
+(A-B).is_a?(Vector)
+# =&gt; true
+</pre>
+</div>
+</div>
+</li></ol>
+</div>
+
+<div id="outline-container-sec-17" class="outline-2">
+<h2 id="sec-17"><span class="section-number-2">17</span> Vectors in Ruby</h2>
+<div class="outline-text-2" id="text-17">
+<p>
+So we will need a Ruby class that represents a vector, as these can be used to model 
+positions.
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-ruby">class Vector
+  attr_reader :components
+end
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-sec-18" class="outline-2">
+<h2 id="sec-18"><span class="section-number-2">18</span> Relation between position, time and veloctiy</h2>
+<div class="outline-text-2" id="text-18">
+</div><ol class="org-ol"><li><a id="sec-18-1" name="sec-18-1"></a>Considering <b>Time</b>, we can represent the path a body takes using a function \(\vec{x}(t)\).<br  /></li>
+
+<li><a id="sec-18-2" name="sec-18-2"></a>The velocity is then just the <b>rate of change of position with respect to time</b><br  /><div class="outline-text-3" id="text-18-2">
+<p>
+\(\vec{v}(t) = \frac{d\vec{x}}{dt}\)
+</p>
+</div>
+</li></ol>
+</div>
+
+<div id="outline-container-sec-19" class="outline-2">
+<h2 id="sec-19"><span class="section-number-2">19</span> Relation between velocity and acceleration</h2>
+<div class="outline-text-2" id="text-19">
+</div><ol class="org-ol"><li><a id="sec-19-1" name="sec-19-1"></a>Similarly, the acceleration is the <b>rate of change of velocity with respect to time</b><br  /></li>
+
+<li><a id="sec-19-2" name="sec-19-2"></a>\(\vec{a}(t) = \frac{d\vec{v}}{dt}\)<br  /></li></ol>
+</div>
+
+<div id="outline-container-sec-20" class="outline-2">
+<h2 id="sec-20"><span class="section-number-2">20</span> Enter Mr. Newton</h2>
+<div class="outline-text-2" id="text-20">
+</div><ol class="org-ol"><li><a id="sec-20-1" name="sec-20-1"></a>Newton's 1st Law states that \(\vec{F} = m\vec{a}\)<br  /></li></ol>
+</div>
+</div>
+<div id="postamble" class="status">
+<p class="date">Date: 2016-03-02 Wed</p>
+<p class="author">Author: Tobi Lehman</p>
+<p class="date">Created: 2016-03-04 Fri 15:17</p>
+<p class="creator"><a href="http://www.gnu.org/software/emacs/">Emacs</a> 24.5.1 (<a href="http://orgmode.org">Org</a> mode 8.2.10)</p>
+<p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
+</div>
+</body>
+</html>
