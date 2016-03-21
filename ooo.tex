@@ -1,4 +1,4 @@
-% Created 2016-03-18 Fri 13:50
+% Created 2016-03-21 Mon 22:35
 \documentclass[bigger]{beamer}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -31,7 +31,7 @@
 
 \maketitle
 
-\begin{frame}[label=sec-1]{Elon Musk is right, we need to go to Mars}
+\begin{frame}[label=sec-1]{What does it take to simulate orbits?}
 \begin{center}
 \begin{tikzpicture}
 \coordinate (s) at (0,0);
@@ -52,9 +52,6 @@
 \fill[red] (m) circle (2pt);
 \end{tikzpicture}
 \end{center}
-
-\begin{block}{Before we can do this, we need to simulate the orbits of Earth and Mars.}
-\end{block}
 \end{frame}
 
 \begin{frame}[label=sec-2]{What we need}
@@ -425,6 +422,9 @@ end
 {\LARGE $\underbrace{\sum_j\vec{F_{ij}}}_\text{sum of all forces acting on the i-th body} = m_i\vec{a}_i$ }
 \end{center}
 \end{block}
+
+\begin{block}{Note that forces are represented as vectors}
+\end{block}
 \end{frame}
 
 \begin{frame}[label=sec-24]{Newton's Law of Universal Gravitation}
@@ -508,14 +508,14 @@ end
 \end{frame}
 
 \begin{frame}[fragile,label=sec-29]{the Enumerable Universe}
- \begin{block}{Since force is computed pairwise, we create an \alert{\alert{iterator for pairs of distinct objects}}}
+ \begin{block}{Since force is computed pairwise, we create an iterator for pairs of distinct objects}
 \begin{minted}[]{ruby}
 class Universe
-  def each_pair
-    bodies.each do |body_i|
-      bodies.each do |body_j|
-        next if body_i == body_j
-        yield [body_i, body_j]
+  def each_pair_with_index
+    bodies.each_with_index do |body_i, i|
+      bodies.each_with_index do |body_j, j|
+        next if i == j
+        yield [body_i, body_j, i, j]
       end
     end
   end
@@ -524,24 +524,197 @@ end
 \end{block}
 \end{frame}
 
-\begin{frame}[fragile,label=sec-30]{The evolve method}
- \begin{block}{Finally, we can define the main simulation loop}
-\begin{minted}[]{ruby}
+\begin{frame}[fragile,label=sec-30]{The main simulation loop}
+ \begin{minted}[]{ruby}
 class Universe
   def evolve(dt)
-    each_pair do |(body_i, body_j)|
-      force_ij = body_i.force_from(body_j)
-      f_over_m = force_ij * (1.0/body_i.mass)
-      body_i.velocity += f_over_m * dt
-      body_i.position += body_i.velocity * dt
+    forces = bodies.map{ |_| zero_vector }
+    each_pair_with_index do |(body_i, body_j, i, j)|
+      forces[i] += body_i.force_from(body_j)
+    end
+    bodies.each_with_index do |_, i|
+      a = forces[i] * (1.0 / bodies[i].mass)
+      v = bodies[i].velocity 
+      bodies[i].velocity += a * dt
+      bodies[i].position += v * dt
     end
   end
 end
 \end{minted}
+\end{frame}
+\begin{frame}[label=sec-31]{The server}
+\begin{block}{We can serve this up to a browser using}
+\begin{itemize}
+\item WEBrick for HTTP
+\item websocketd for piping STDOUT to a WebSocket server
+\end{itemize}
 \end{block}
 \end{frame}
-\begin{frame}[label=sec-31]{Binary Star system}
+\begin{frame}[fragile,label=sec-32]{Fork off an HTTP server}
+ \begin{minted}[]{ruby}
+rd, wt = IO.pipe
+pid = fork do
+  rd.close
+  server = WEBrick::HTTPServer.new({
+    :Port => PORT,
+    :BindAddress => "localhost",
+    :StartCallback => Proc.new {
+      wt.write(1)  # write "1", signal start
+      wt.close
+    }
+  })
+  trap('INT') { server.stop }
+  server.mount("/", WEBrick::HTTPServlet::FileHandler, './examples')
+  server.start
+end
+# ...
+\end{minted}
+\end{frame}
+
+\begin{frame}[fragile,label=sec-33]{Shell out to websocketd}
+ \begin{block}{websocketd converts standard input and output into a fully functioning websocket server, so we can just puts out the universe state}
+\begin{minted}[]{ruby}
+examples = ["binary.rb", "ternary.rb", "random.rb", "figure_eight.rb"]
+index = ARGV.last.to_i
+# Shell out to websocketd, block until program finishes
+system("bin/websocketd \
+   -port=8080 \
+   ruby #{examples[index]}")
+
+Process.kill('INT', pid)   # kill HTTP server in child process
+\end{minted}
+\end{block}
+\end{frame}
+
+\begin{frame}[label=sec-34]{Binary Star system}
 \begin{block}{Our first application is going to be simulating a binary star system, with two equal-mass stars}
+\begin{center}
+\begin{tikzpicture}
+\coordinate (a) at (-2,0);
+\coordinate (a') at (-2,-.7);
+\coordinate (b) at (2,0);
+\coordinate (b') at (2,.7);
+\coordinate (c) at (0,0);
+\draw[lightgray] (c) circle  (57pt);
+
+\draw[->,line width=1] (a) to (a');
+\draw[black] (a) circle (4pt);
+\fill[yellow] (a) circle (4pt);
+\node[above left] at (a) {$m$};
+\node[above left] at (a') {$-\vec{v}$};
+
+\draw[->,line width=1] (b) to (b');
+\draw[black] (b) circle (4pt);
+\fill[yellow] (b) circle (4pt);
+\node[below right] at (b) {$m$};
+\node[below right] at (b') {$\vec{v}$};
+
+\end{tikzpicture}
+\end{center}
+\end{block}
+\end{frame}
+\begin{frame}[label=sec-35]{Find initial conditions}
+\begin{block}{The two bodies will be traveling in uniform circular motion, so the following relation holds:}
+\begin{center}
+{\LARGE ${\color{red} a} = \frac{v^2}{r}$}
+
+\begin{tikzpicture}
+\coordinate (c) at (0pt,0pt);
+\coordinate (p) at (75pt,0pt);
+\coordinate (p') at (75pt,50pt);
+\coordinate (m) at (50pt,0pt);
+
+\draw[lightgray] (c) circle (75pt);
+\draw[black] (p) circle (5pt);
+\draw[->,line width=1] (p) to (p');
+\draw[blue] (c) to (p);
+\node[below left] at (30pt,0) {$r$};
+\fill[white] (p) circle (5pt);
+\node[below right] at (p') {$\vec{v}$};
+\node[above right] at (p) {$|\vec{v}| = v$};
+\node[below right,red] at (p) {$|\vec{a}| = a$ (centripetal acceleration)};
+
+\draw[->,red,line width=1] (p) to (m);
+\node[below,red] at (m) {$\vec{a}$};
+\end{tikzpicture}
+\end{center}
+\end{block}
+\end{frame}
+
+\begin{frame}[label=sec-36]{Given the masses and the distance $r$, we can figure out $a$:}
+\begin{center}
+{\LARGE $ a = (Gm^2/4r^2)/m = Gm/4r^2 $}
+\end{center}
+\end{frame}
+\begin{frame}[label=sec-37]{Substituting a back in to get $v$}
+\begin{center}
+{\LARGE $v = \sqrt{(Gm/4r^2)*r} = \sqrt{Gm/4r} $ }
+\end{center}
+\end{frame}
+\begin{frame}[label=sec-38]{Run simulated binary star system}
+\begin{block}{Pause to run simulations}
+\end{block}
+\end{frame}
+\begin{frame}[label=sec-39]{The Three Body Problem}
+\begin{block}{With only two bodies, it turns out to be possible to solve the equations of motion for \alert{all time}, exactly.}
+\end{block}
+\begin{block}{With three or more bodies, it is in general impossible}
+\end{block}
+\end{frame}
+\begin{frame}[label=sec-40]{However}
+\begin{block}{The three body problem has been studied since 1747, and there are some well known examples}
+\end{block}
+\end{frame}
+\begin{frame}[label=sec-41]{The "Figure Eight" Three Body Orbit}
+\begin{block}{The paper "A remarkable periodic solution of the three-body problem in the case of equal masses" by Alain Chenciner and Richard Montgomery works out an orbit that looks like this:}
+\begin{center}
+\begin{tikzpicture}
+  \def\samples{100}
+  \def\c{1}
+  \pgfmathsetmacro\cc{\c*\c}
+  \pgfmathsetmacro\cccc{\cc*\cc}
+  \def\a{1.01}
+  \draw
+    (0, 0) --
+    plot[
+      variable=\t,
+      domain=-45+1/\samples:45-1/\samples,
+      samples=\samples,
+      smooth,
+    ]
+    (\t:{\cc*sqrt(\cc*cos(2*\t) + \cc*cos(2*\t))})
+    -- cycle
+  ;
+  \draw
+    (0, 0) --
+    plot[
+      variable=\t,
+      domain=180-45+1/\samples:180+45-1/\samples,
+      samples=\samples,
+      smooth,
+    ]
+    (\t:{\cc*sqrt(\cc*cos(2*\t) + \cc*cos(2*\t))})
+    -- cycle
+  ;
+  \path plot coordinates { (-\c, 0) (\c, 0) };
+
+\end{tikzpicture}
+\end{center}
+\end{block}
+\end{frame}
+\begin{frame}[label=sec-42]{The initial conditions}
+\begin{block}{$\vec{x_1} = [0.97000436, -0.24308753]; \vec{x_2} = -\vec{x_1}$}
+\end{block}
+\begin{block}{$\vec{x_3} = \vec{0}$}
+\end{block}
+\begin{block}{$\vec{v_3} = [-0.93240737, -0.86473146]$}
+\end{block}
+\begin{block}{$-2\vec{v_1} = -2\vec{v_2} = \vec{v_3}$}
+\includegraphics[width=.9\linewidth]{figure8.png}
+\end{block}
+\end{frame}
+\begin{frame}[label=sec-43]{Run simulated three-body orbit}
+\begin{block}{Pause to run simulations}
 \end{block}
 \end{frame}
 % Emacs 24.5.1 (Org mode 8.2.10)
